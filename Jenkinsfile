@@ -44,7 +44,7 @@ pipeline {
           sh '''
                   #!/bin/bash
                 sed -i  "s|magento_tag.*|${tag_id}|g" values.yaml
-                git config --global --add safe.directory /home/jenkins/agent/workspace/egc-testing-cd
+                git config --global --add safe.directory /home/jenkins/agent/workspace/egc-testing-cd/
                 git config --global user.email "gopi.k@codilar.com"
                 git config --global user.name "gopi"
                 git add .
