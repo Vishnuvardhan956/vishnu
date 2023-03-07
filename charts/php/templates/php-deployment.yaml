@@ -160,7 +160,7 @@ spec:
               path: authorized_keys
       - name: app-media-persistent-storage
         persistentVolumeClaim:
-          claimName: "egc-media"  
+          claimName: "egc-testing-media"  
       - name: nginx-conf
         configMap:
           name: "{{ .Release.Name }}-nginx-conf"
