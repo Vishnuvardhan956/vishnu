@@ -22,7 +22,7 @@ metadata:
 spec:
   ports:
     - port: 22
-      nodePort: 31558
+      nodePort: 31628
   selector:
     {{- include "php.selectorLabels" . | nindent 4 }}
   type: NodePort
