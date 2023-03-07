@@ -1,0 +1,186 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "php.fullname" . }}
+  labels:
+    {{- include "php.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "php.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "php.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.magento_repository }}:{{ .Values.image.magento_tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: BASEPATH
+          value: {{ .Values.magento.basepath | quote }}
+        - name: MYSQL_HOST
+          value: {{ .Values.database.host | quote }}
+        - name: MYSQL_PORT
+          value: {{ .Values.database.port | quote }}
+        - name: MYSQL_USER
+          value: {{ .Values.database.user | quote }}
+        - name: MYSQL_PASSWORD
+          valueFrom: 
+            secretKeyRef: 
+              key: password
+              name: {{ .Release.Name }}-php-secret
+        - name: MYSQL_DATABASE
+          value: {{ .Values.database.database_name | quote }}
+        - name: VARNISH_ACCESS_LIST
+          value: {{ include "php.fullname" . }}
+        - name: VARNISH_BACKEND_HOST
+          value: {{ include "php.fullname" . }}  
+        - name: VARNISH_HOST
+          value: {{ .Release.Name }}-varnish-ext-db           
+        - name: REDIS_HOST
+          value: "{{ .Release.Name }}redis"
+        - name: REDIS_PORT
+          value: "6379"
+        {{ if .Values.elasticsearch.enabled }}
+        - name: ELASTICSEARCH_HOST
+          value: {{ .Values.elasticsearch.host | quote }}
+        - name: ELASTICSEARCH_PORT
+          value: {{ .Values.elasticsearch.port | quote }}
+        - name: ELASTICSEARCH_INDEX_PREFIX
+          value: {{ .Values.elasticsearch.index_prefix | quote }}
+        {{ if .Values.elasticsearch.auth.enabled }}
+        - name: ELASTICSEARCH_AUTH
+          value: {{ .Values.elasticsearch.auth.auth | quote }}
+        - name: ELASTICSEARCH_USER
+          value: {{ .Values.elasticsearch.auth.user | quote }}
+        - name: ELASTICSEARCH_PASSWORD
+          valueFrom: 
+            secretKeyRef: 
+              key: elasticsearch-password
+              name: {{ .Release.Name }}-php-secret
+        {{ end }}
+        {{ end }}
+        {{ if .Values.rabbitmq.enabled }}
+        - name: RABBITMQ_HOST
+          value: {{ .Values.rabbitmq.host | quote }}
+        - name: RABBITMQ_DEFAULT_USER
+          value: {{ .Values.rabbitmq.user | quote }}
+        - name: RABBITMQ_DEFAULT_PASS
+          valueFrom: 
+            secretKeyRef: 
+              key: rabbitmq-password
+              name: {{ .Release.Name }}-php-secret
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: {{ .Values.rabbitmq.default_vhost | quote }}
+        {{ end }}
+        - name: MAGENTO_FIRST_NAME
+          value: {{ .Values.magento.firstName | quote }}
+        - name: MAGENTO_LAST_NAME
+          value: {{ .Values.magento.lastName | quote }}
+        - name: MAGENTO_EMAIL
+          value: {{ .Values.magento.email | quote }}
+        - name: MAGENTO_USER
+          valueFrom: 
+            secretKeyRef: 
+              key: magento-user
+              name: "{{ .Release.Name }}-php-secret"
+        - name: MAGENTO_PASSWORD
+          valueFrom: 
+            secretKeyRef: 
+              key: magento-password
+              name: "{{ .Release.Name }}-php-secret"
+        - name: MAGENTO_ADMINURI
+          valueFrom: 
+            secretKeyRef: 
+              key: magento-adminuri
+              name: "{{ .Release.Name }}-php-secret"
+        - name: MAGENTO_MODE
+          value: {{ .Values.magento.mode | quote }}
+        - name: MAGENTO_BASEURL
+          value: {{ .Values.magento.base_url | quote }}
+        - name: MAGENTO_SECURE_BASEURL
+          value: {{ .Values.magento.base_secure_url | quote }}
+        ports:
+        - containerPort: 8080
+          name: app
+        - containerPort: 22
+          name: ssh
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+        - name: app-shared-code-persistent-storage
+          mountPath: "/var/www/html"  
+        - name: root-ssh-persistent-storage
+          mountPath: "/root/ssh"          
+        - name: app-media-persistent-storage
+          mountPath: "/var/www/html/pub/media"       
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+          readOnly: true                     
+        {{ if .Values.persisted.enabled }}
+        - name: app-static-persistent-storage
+          mountPath: "/var/www/html/pub/static"
+        - name: app-media-persistent-storage
+          mountPath: "/var/www/html/pub/media"
+        - name: app-generated-persistent-storage
+          mountPath: "/var/www/html/generated"
+        - name: app-config-persistent-storage
+          mountPath: "/var/www/html/app/etc"
+        - name: app-var-persistent-storage
+          mountPath: "/var/www/html/var"
+        {{ end }}
+        command: ["/start.sh"]
+        # args: ["$(GREETING) $(HONORIFIC) $(NAME)"] 
+      volumes:
+      - name: app-shared-code-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-shared-code-pvc"  
+      - name: root-ssh-persistent-storage
+        configMap:
+          name: "{{ .Release.Name }}-php-ssh"
+          defaultMode: 0644
+          items:
+            - key: authorized_keys
+              path: authorized_keys
+      - name: app-media-persistent-storage
+        persistentVolumeClaim:
+          claimName: "egc-media"  
+      - name: nginx-conf
+        configMap:
+          name: "{{ .Release.Name }}-nginx-conf"
+          items:
+            - key: default.conf
+              path: default.conf                          
+      {{ if .Values.persisted.enabled }}
+      - name: app-static-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-static-pvc"
+      - name: app-media-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-media-pvc"
+      - name: app-generated-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-generated-pvc"
+      - name: app-config-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-config-pvc"
+      - name: app-var-persistent-storage
+        persistentVolumeClaim:
+          claimName: "{{ .Release.Name }}-php-var-pvc"
+      {{ end }}

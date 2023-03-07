@@ -1,0 +1,85 @@
+# Default values for php.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+magento:
+  basepath: "/var/www/html"
+  firstName: "Codilar"
+  lastName: "Developer"
+  email: "developer@codilar.com"
+  user: "admin"
+  password: "admin123"
+  admin_uri: "admin"
+  mode: "developer"
+  base_url: "http://magento.codilar.in"
+  base_secure_url: "https://magento.codilar.in"
+
+database:
+  databaseName: magento
+  user: magento
+  password: "magento"
+  root_password: "root123"
+
+
+
+persisted:
+  storage:
+    static_content: 2Gi
+    media: 10Gi
+    generated: 2Gi
+    config: 1Gi
+    var: 2Gi
+    code: 2Gi
+
+replicaCount: 1
+
+image:
+  repository: codilartech/magento
+  pullPolicy: Alaways
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "2.3.7"
+
+imagePullSecrets:
+  - name: docker-registry-credentials
+nameOverride: ""
+fullnameOverride: ""
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 9000
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

@@ -1,0 +1,155 @@
+# Default values for nginx.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: varnish
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "6.0"
+
+imagePullSecrets:
+  - name: harbor-registry-credentials
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+php:
+  image:
+    magento_repository: harbor.codilar.dev/egc-testing/magento
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    magento_tag: 47
+    
+  imagePullSecrets:
+    - name: harbor-registry-credentials
+
+  magento:
+    basepath: "/var/www/html"
+    firstName: "Codilar"
+    lastName: "Developer"
+    email: "testing-egc@codilar.com"
+    user: "egc-admin"
+    password: "admin123"
+    admin_uri: "admin"
+    mode: "developer"
+    base_url: "http://egc-qa.codilar.dev"
+    base_secure_url: "https://egc-qa.codilar.dev"
+  elasticsearch:
+    enabled: ture
+    host: 45.252.190.102
+    port: 9200
+    index_prefix: "magento_egc_testing"
+    auth:
+      enabled: false
+      auth: 1
+      user: elastic
+      password: elastic
+  rabbitmq:
+    enabled: true
+    host: 10.43.189.4
+    user: egcsupply
+    pass: EgcSupply@R
+    default_vhost: egcsupply 
+
+  database:
+    host: "mariadb"
+    port: 3306
+    database_name: egc_testing
+    user: magento
+    password: "magento"
+
+  redis:
+    image:
+      repository: redis
+      pullPolicy: IfNotPresent
+      # Overrides the image tag whose default is the chart appVersion.
+      tag: "5"
+    persisted:
+      enabled: false
+      storage: 2Gi
+
+  persisted:
+    enabled: false
+    storage:
+      code: 10Gi
+      static_content: 2Gi
+      media: 1Gi
+      generated: 2Gi
+      config: 1Gi
+      var: 2Gi
+
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:ap-south-1:527154309220:certificate/f85834dd-c378-497f-b11f-0e25d116ad2d
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+    # service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http   
+
+ingress:
+  enabled: true
+  annotations: {}
+    # nginx.ingress.kubernetes.io/rewrite-target: /$1
+    # nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    # nginx.ingress.kubernetes.io/proxy-buffers-number: "16"
+    # nginx.ingress.kubernetes.io/proxy-buffer-size: "256k"
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: egc-qa.codilar.dev
+      paths:
+        - path: /
+          pathType: Prefix                              
+  tls:
+   - secretName: codilar-dev-tls-secret
+     hosts:
+       - egc-qa.codilar.dev
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

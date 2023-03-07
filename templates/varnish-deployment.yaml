@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "varnish.fullname" . }}
+  labels:
+    {{- include "varnish.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "varnish.selectorLabels" . | nindent 6 }}
+  # strategy:
+  #   type: Recreate
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "varnish.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8080
+          name: varnish
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        volumeMounts:
+        - name: varnish-conf
+          mountPath: /etc/varnish
+          readOnly: true
+      volumes:
+      - name: varnish-conf
+        configMap:
+          name: "{{ .Release.Name }}-varnish-conf"
+          items:
+            - key: default.vcl
+              path: default.vcl
