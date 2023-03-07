@@ -42,7 +42,7 @@ php:
     magento_repository: harbor.codilar.dev/egc-testing/magento
     pullPolicy: Always
     # Overrides the image tag whose default is the chart appVersion.
-    magento_tag: 1
+    magento_tag: 2
     
   imagePullSecrets:
     - name: harbor-registry-credentials
